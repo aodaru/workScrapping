@@ -1,0 +1,19 @@
+export interface Project {
+  id: string;
+  title: string;
+  description: string;
+  budget: string;
+  skills: string[];
+  url: string;
+  postedDate: string;
+  extractedAt: string;
+  paymentVerified: boolean;
+  language: 'es' | 'en';
+}
+
+export interface JobsResponse {
+  data: Project[];
+  cached: boolean;
+  fetchedAt: string;
+  total: number;
+}
