@@ -1,4 +1,4 @@
-import { chromium, type Browser, type Page } from 'playwright';
+import { firefox, type Browser, type Page } from 'playwright';
 import type { Project } from '../types.js';
 
 const BASE_FILTERS = {
@@ -132,7 +132,7 @@ export async function scrapeJobs(): Promise<Project[]> {
   const allFilteredProjects: Project[] = [];
 
   try {
-    browser = await chromium.launch({ headless: true });
+    browser = await firefox.launch({ headless: true });
     const context = await browser.newContext();
     const page = await context.newPage();
 
