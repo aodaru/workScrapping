@@ -1,5 +1,6 @@
 [phases.setup]
 nixPkgs = ['nodejs', 'playwright']
+aptPkgs = ['curl', 'wget']
 
 [phases.install]
 cmds = ['npm install', 'npx playwright install --with-deps']
@@ -7,8 +8,8 @@ cmds = ['npm install', 'npx playwright install --with-deps']
 [phases.build]
 cmds = ['npm run build']
 
-[phases.start]
-cmds = ['npm run start']
+[start]
+cmd = 'npm run start'
 
 [variables]
 NODE_ENV = 'production'
