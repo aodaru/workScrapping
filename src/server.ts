@@ -6,9 +6,18 @@ import type { JobsResponse } from './types.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const API_KEY = process.env.API_KEY || 'workana-api-key';
 
 app.use(cors());
 app.use(express.json());
+
+const authMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const providedKey = req.headers['x-api-key'];
+  if (!providedKey || providedKey !== API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+};
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -50,7 +59,7 @@ app.get('/getJobs', async (_req, res) => {
   }
 });
 
-app.post('/refresh', async (_req, res) => {
+app.post('/refresh', authMiddleware, async (_req, res) => {
   try {
     console.log('🔄 Forzando refresh...');
     jobCache.clear();
@@ -78,6 +87,6 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📋 Endpoints:`);
   console.log(`   GET  /getJobs  - Obtener jobs (usa cache si disponible)`);
-  console.log(`   POST /refresh  - Forzar refresh de jobs`);
+  console.log(`   POST /refresh  - Forzar refresh (requiere x-api-key: ${API_KEY})`);
   console.log(`   GET  /health   - Health check`);
 });

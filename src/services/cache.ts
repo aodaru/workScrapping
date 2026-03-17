@@ -8,6 +8,7 @@ interface CacheEntry {
 class JobCache {
   private cache: CacheEntry | null = null;
   private ttl: number;
+  private maxProjects: number = 100;
 
   constructor(ttlMinutes: number = 15) {
     this.ttl = ttlMinutes * 60 * 1000;
@@ -33,8 +34,9 @@ class JobCache {
   }
 
   set(data: Project[]): void {
+    const limitedData = data.slice(0, this.maxProjects);
     this.cache = {
-      data,
+      data: limitedData,
       timestamp: Date.now(),
     };
   }

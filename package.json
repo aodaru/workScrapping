@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Workana scraper API",
   "main": "src/server.ts",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "tsx src/server.ts",
     "start": "node --import tsx src/server.ts",

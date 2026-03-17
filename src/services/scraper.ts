@@ -13,12 +13,12 @@ const LANGUAGE_FILTERS = {
   es: {
     ...BASE_FILTERS,
     language: 'es',
-    skills: 'programacion web, ia',
+    skills: 'programacion web, ia, wordpress',
   },
   en: {
     ...BASE_FILTERS,
     language: 'en',
-    skills: 'web development, ai',
+    skills: 'web development, ai, wordpress',
   },
 };
 
@@ -143,8 +143,8 @@ export async function scrapeJobs(): Promise<Project[]> {
       console.log(`\n🔍 Scraping Workana (${currentLanguageName})...`);
 
       const url = buildUrl('https://www.workana.com/jobs', filters);
-      await page.goto(url);
-      await page.waitForLoadState('networkidle');
+      await page.goto(url, { timeout: 15000 });
+      await page.waitForLoadState('domcontentloaded');
 
       try {
         const acceptButton = page.locator('button:has-text("Accept"), button:has-text("Aceptar"), [data-testid="cookie-accept"]').first();
@@ -163,6 +163,16 @@ export async function scrapeJobs(): Promise<Project[]> {
       const filteredProjects = basicProjects.filter(project => {
         const validBudget = hasValidBudget(project.budget);
         const paymentVerified = project.paymentVerified;
+
+        if (!validBudget || !paymentVerified) {
+          console.log('❌ Descartado:', JSON.stringify({
+            title: project.title,
+            budget: project.budget,
+            validBudget,
+            paymentVerified
+          }));
+        }
+
         return validBudget && paymentVerified;
       });
 
