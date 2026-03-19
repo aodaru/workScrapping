@@ -3,7 +3,7 @@ nixPkgs = ['nodejs', 'playwright']
 aptPkgs = ['curl', 'wget']
 
 [phases.install]
-cmds = ['npm install', 'npx playwright install --with-deps']
+cmds = ['npm install --save-dev @types/express @types/cors @types/node', 'npx playwright install --with-deps']
 
 [phases.build]
 cmds = ['npm run build']
