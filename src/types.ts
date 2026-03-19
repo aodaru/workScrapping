@@ -8,6 +8,7 @@ export interface Project {
   postedDate: string;
   extractedAt: string;
   paymentVerified: boolean;
+  bids: number;
 }
 
 export interface JobsResponse {

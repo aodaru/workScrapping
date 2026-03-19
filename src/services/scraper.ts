@@ -63,6 +63,7 @@ async function extractProjectsFromList(page: Page): Promise<Project[]> {
       const skillsEls = card.querySelectorAll('.skill, .tag, [class*="skill"], [class*="tag"]');
       const linkEl = card.querySelector('a');
       const dateEl = card.querySelector('.date, .posted, [class*="date"], [class*="time"]');
+      const bids = card.querySelector('.bids, [class*="bids"]')
       
       const paymentVerifiedEl = card.querySelector('span.payment-verified, .payment-verified span');
       const paymentVerified = paymentVerifiedEl ? true : false;
@@ -82,6 +83,7 @@ async function extractProjectsFromList(page: Page): Promise<Project[]> {
         postedDate: dateEl?.textContent?.trim() || 'N/A',
         extractedAt: new Date().toISOString(),
         paymentVerified: paymentVerified,
+        bids: bids?.textContent?.trim().split(': ')[1] || '0',
       };
     }).filter((p: any) => p.title !== 'N/A' && p.url !== '');
   });
