@@ -8,7 +8,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY || 'workana-api-key';
 
-app.use(cors());
+const corsOptions = {
+  origin: [
+    'http://localhost',
+    'https://teapartyn8n.duckdns.org/'
+  ]
+}
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const authMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
