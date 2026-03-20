@@ -30,7 +30,7 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.get('/getJobs', async (_req, res) => {
+app.get('/getJobs', authMiddleware, async (_req, res) => {
   try {
     const cached = jobCache.get();
 
