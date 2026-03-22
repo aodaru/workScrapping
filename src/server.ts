@@ -1,8 +1,8 @@
 import express from 'express';
 import cors from 'cors';
-import { jobCache } from './services/cache.js';
-import { scrapeJobs } from './services/scraper.js';
-import type { JobsResponse } from './types.js';
+import { jobCache } from './services/cache.ts';
+import { scraperWorkana } from './services/scraperWorkana.ts';
+import type { JobsResponse } from './types.ts';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,7 +10,7 @@ const API_KEY = process.env.API_KEY || 'workana-api-key';
 
 const corsOptions = {
   origin: [
-    'http://localhost',
+    'localhost',
     'https://teapartyn8n.duckdns.org/'
   ]
 }
@@ -30,35 +30,57 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.get('/getJobs', authMiddleware, async (_req, res) => {
+app.get('/listworkana', authMiddleware, async (_req, res) => {
   try {
     const cached = jobCache.get();
-
-    if (cached) {
-      console.log('📦 Retornando datos desde cache');
-      const response: JobsResponse = {
-        data: cached.data,
-        cached: true,
-        fetchedAt: new Date().toISOString(),
-        total: cached.data.length,
-      };
-      return res.json(response);
-    }
-
+    
     console.log('🔄 Ejecutando scraping...');
-    const jobs = await scrapeJobs();
-    jobCache.set(jobs);
+    const jobs = await scraperWorkana();
 
-    const response: JobsResponse = {
-      data: jobs,
-      cached: false,
-      fetchedAt: new Date().toISOString(),
-      total: jobs.length,
-    };
+    // modificar esta parte
+    if (cached) {
+      const dataCached = cached.data
 
-    res.json(response);
+      console.log(`cantidad de cache ${dataCached.length}`);
+
+      const cachedIndex = dataCached.reduce((acc, cache) => {
+        const id = cache.id 
+
+        if(!acc[id]) {
+          acc[id] = []
+        }
+
+        acc[id].push(cache)
+
+        return acc
+      }, {} as Record<string, Project[]>)
+
+      const jobsFilter = jobs.filter(job => !cachedIndex[job.id]) 
+
+      const response: JobsResponse = {
+        data: jobsFilter,
+        cached: false,
+        fetchedAt: new Date().toISOString(),
+        total: jobs.length,
+      };
+
+      res.json(response);
+      jobCache.set(jobsFilter);
+    }else{
+      jobCache.set(jobs);
+
+      // esto debe devolver los trabajos filtrados
+      const response: JobsResponse = {
+        data: jobs,
+        cached: false,
+        fetchedAt: new Date().toISOString(),
+        total: jobs.length,
+      };
+
+      res.json(response);
+    }
   } catch (error) {
-    console.error('❌ Error en /getJobs:', error);
+    console.error('❌ Error en /listworkana:', error);
     res.status(500).json({
       error: 'Failed to fetch jobs',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -70,7 +92,7 @@ app.post('/refresh', authMiddleware, async (_req, res) => {
   try {
     console.log('🔄 Forzando refresh...');
     jobCache.clear();
-    const jobs = await scrapeJobs();
+    const jobs = await scraperWorkana();
     jobCache.set(jobs);
 
     const response: JobsResponse = {

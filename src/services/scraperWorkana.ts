@@ -4,21 +4,17 @@ import type { Project } from '../types.js';
 const BASE_FILTERS = {
   category: 'it-programming',
   publication: '3d',
-  has_few_bids: '1',
-  agreement: '',
-  country: '',
+  client_history: '1',
 };
 
 const LANGUAGE_FILTERS = {
   es: {
     ...BASE_FILTERS,
-    language: 'es',
-    skills: 'programacion web, ia, wordpress',
+    language: 'es'
   },
   en: {
     ...BASE_FILTERS,
-    language: 'en',
-    skills: 'web development, ai, wordpress',
+    language: 'en'
   },
 };
 
@@ -58,6 +54,10 @@ async function extractProjectsFromList(page: Page): Promise<Project[]> {
     
     return Array.from(projectCards || []).slice(0, 10).map((card, index) => {
       const titleEl = card.querySelector('h2, h3, .project-title, .job-title, [class*="title"]');
+      // general un identificador unico
+      const id = btoa(encodeURIComponent(titleEl?.textContent?.trim()))
+      .replace(/[+/=]/g, '')
+      .substring(0, 12);
       const descEl = card.querySelector('.description, .project-description, .job-description, p');
       const budgetEl = card.querySelector('.budget, .price, [class*="budget"], [class*="price"]');
       const skillsEls = card.querySelectorAll('.skill, .tag, [class*="skill"], [class*="tag"]');
@@ -74,7 +74,7 @@ async function extractProjectsFromList(page: Page): Promise<Project[]> {
       }
       
       return {
-        id: `proj_${index}_${Date.now()}`,
+        id: id,
         title: titleEl?.textContent?.trim() || 'N/A',
         description: descEl?.textContent?.trim() || '',
         budget: budgetEl?.textContent?.trim() || 'N/A',
@@ -129,18 +129,32 @@ function sortByPostedDate(projects: Project[]): Project[] {
   });
 }
 
-export async function scrapeJobs(): Promise<Project[]> {
+async function getPageCount(page: Page): Promise<number[]> {
+  return await page.evaluate(() => {
+    // Selector más específico para los números de paginación
+    const paginationItems = document.querySelectorAll('.pagination a, [class*="page-number"], [data-page]');
+    const pageNumbers = Array.from(paginationItems)
+      .map(el => parseInt(el.textContent?.trim() || '0'))
+      .filter(n => n > 0);
+    
+    // Retorna array único y ordenado
+    return [...new Set(pageNumbers)].sort((a, b) => a - b);
+  });
+}
+
+export async function scraperWorkana(): Promise<Project[]> {
   let browser: Browser | null = null;
   const allFilteredProjects: Project[] = [];
 
   try {
-    browser = await firefox.launch({ headless: true });
+    browser = await firefox.launch({ headless: false });
     const context = await browser.newContext();
     const page = await context.newPage();
 
     for (const lang of ['es', 'en'] as const) {
       const filters = LANGUAGE_FILTERS[lang];
       const currentLanguageName = lang === 'es' ? 'ESPAÑOL' : 'INGLÉS';
+      const allProjectsByLang: Project[] = [];
 
       console.log(`\n🔍 Scraping Workana (${currentLanguageName})...`);
 
@@ -148,21 +162,24 @@ export async function scrapeJobs(): Promise<Project[]> {
       await page.goto(url, { timeout: 15000 });
       await page.waitForLoadState('domcontentloaded');
 
-      try {
-        const acceptButton = page.locator('button:has-text("Accept"), button:has-text("Aceptar"), [data-testid="cookie-accept"]').first();
-        await acceptButton.click({ timeout: 3000 });
-      } catch {
-        // Cookie banner not present
+      const pageNumbers = await getPageCount(page)
+
+// codigo bucle de paginacion
+      for (const pag of pageNumbers){
+        await page.goto(`${url}&page=${pag}`, { timeout: 15000 });
+        await page.waitForLoadState('domcontentloaded');
+        const basicProjects = await extractProjectsFromList(page);
+        console.log(basicProjects)
+        allProjectsByLang.push(...basicProjects)
       }
 
-      const basicProjects = await extractProjectsFromList(page);
-      console.log(`   ${basicProjects.length} proyectos extraídos.`);
 
-      if (basicProjects.length === 0) {
+      console.log(`   ${allProjectsByLang.length} proyectos extraídos.`);
+      if (allProjectsByLang.length === 0) {
         continue;
       }
 
-      const filteredProjects = basicProjects.filter(project => {
+      const filteredProjects = allProjectsByLang.filter(project => {
         const validBudget = hasValidBudget(project.budget);
         const paymentVerified = project.paymentVerified;
 

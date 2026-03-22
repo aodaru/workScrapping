@@ -56,4 +56,4 @@ class JobCache {
   }
 }
 
-export const jobCache = new JobCache(15);
+export const jobCache = new JobCache(4320);
