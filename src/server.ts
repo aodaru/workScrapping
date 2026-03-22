@@ -1,8 +1,9 @@
 import express from 'express';
 import cors from 'cors';
-import { jobCache } from './services/cache.ts';
-import { scraperWorkana } from './services/scraperWorkana.ts';
-import type { JobsResponse } from './types.ts';
+import { jobCache } from './services/cache.js';
+import { scraperWorkana } from './services/scraperWorkana.js';
+import type { JobsResponse } from './types.js';
+import type { Project } from './types.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;

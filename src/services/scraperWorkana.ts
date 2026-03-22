@@ -54,8 +54,9 @@ async function extractProjectsFromList(page: Page): Promise<Project[]> {
     
     return Array.from(projectCards || []).slice(0, 10).map((card, index) => {
       const titleEl = card.querySelector('h2, h3, .project-title, .job-title, [class*="title"]');
+      const title: string = titleEl?.textContent?.trim() ?? ''
       // general un identificador unico
-      const id = btoa(encodeURIComponent(titleEl?.textContent?.trim()))
+      const id = btoa(encodeURIComponent(title))
       .replace(/[+/=]/g, '')
       .substring(0, 12);
       const descEl = card.querySelector('.description, .project-description, .job-description, p');
@@ -75,7 +76,7 @@ async function extractProjectsFromList(page: Page): Promise<Project[]> {
       
       return {
         id: id,
-        title: titleEl?.textContent?.trim() || 'N/A',
+        title: title || 'N/A',
         description: descEl?.textContent?.trim() || '',
         budget: budgetEl?.textContent?.trim() || 'N/A',
         skills: Array.from(skillsEls).map(s => s.textContent?.trim()).filter(Boolean),
