@@ -148,7 +148,7 @@ export async function scraperWorkana(): Promise<Project[]> {
   const allFilteredProjects: Project[] = [];
 
   try {
-    browser = await firefox.launch({ headless: false });
+    browser = await firefox.launch({ headless: true });
     const context = await browser.newContext();
     const page = await context.newPage();
 
