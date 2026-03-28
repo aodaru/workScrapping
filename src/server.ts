@@ -31,6 +31,18 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.get('/listwork', (req, res) => {
+  const cached = jobCache.get()
+
+  const response: JobsResponse = {
+    data: cached,
+    fetchedAt: new Date().toISOString(),
+    total: cached.length,
+  };
+
+  res.json(response);
+})
+
 app.get('/listworkana', authMiddleware, async (_req, res) => {
   try {
     const cached = jobCache.get();
