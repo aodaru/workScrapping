@@ -15,4 +15,5 @@ export interface JobsResponse {
   data: Project[];
   fetchedAt: string;
   total: number;
+  message: string;
 }
