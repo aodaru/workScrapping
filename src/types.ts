@@ -13,7 +13,6 @@ export interface Project {
 
 export interface JobsResponse {
   data: Project[];
-  cached: boolean;
   fetchedAt: string;
   total: number;
 }

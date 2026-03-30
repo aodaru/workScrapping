@@ -32,15 +32,22 @@ app.get('/health', (_req, res) => {
 });
 
 app.get('/listwork', (req, res) => {
+  
   const cached = jobCache.get()
 
-  const response: JobsResponse = {
-    data: cached,
-    fetchedAt: new Date().toISOString(),
-    total: cached.length,
-  };
+  if(cached){
+    console.log(cached)
+    // console.log(`cantidad de cache ${cached.data.length}`);
+    const response: JobsResponse = {
+      data: cached,
+      fetchedAt: new Date().toISOString(),
+      total: cached.length,
+    };
 
-  res.json(response);
+    res.json(response);
+  }else{
+    res.status(404).json({ error: 'Cache is empty' })
+  }
 })
 
 app.get('/listworkana', authMiddleware, async (_req, res) => {
@@ -57,7 +64,7 @@ app.get('/listworkana', authMiddleware, async (_req, res) => {
       console.log(`cantidad de cache ${dataCached.length}`);
 
       const cachedIndex = dataCached.reduce((acc, cache) => {
-        const id = cache.id 
+        const id = cache.id
 
         if(!acc[id]) {
           acc[id] = []
@@ -70,23 +77,28 @@ app.get('/listworkana', authMiddleware, async (_req, res) => {
 
       const jobsFilter = jobs.filter(job => !cachedIndex[job.id]) 
 
-      const response: JobsResponse = {
-        data: jobsFilter,
-        cached: false,
-        fetchedAt: new Date().toISOString(),
-        total: jobs.length,
-      };
 
-      res.json(response);
-      jobCache.set(jobsFilter);
+      if(jobsFilter.length > 0){
+        const response: JobsResponse = {
+          data: jobsFilter,
+          fetchedAt: new Date().toISOString(),
+          total: jobs.length,
+        };
+        jobCache.set([...cached, ...jobsFilter]);
+        res.json(response);
+      }else{
+        const response: JobsResponse = {
+          message: 'no hay nuevos post!',
+        };
+        res.status(200).json(response);
+      }
     }else{
       jobCache.set(jobs);
 
       // esto debe devolver los trabajos filtrados
       const response: JobsResponse = {
         data: jobs,
-        cached: false,
-        fetchedAt: new Date().toISOString(),
+        fetchedAt: new Date().toLocaleString('es-PA', { timeZone: 'America/Panama' }),
         total: jobs.length,
       };
 
@@ -110,8 +122,7 @@ app.post('/refresh', authMiddleware, async (_req, res) => {
 
     const response: JobsResponse = {
       data: jobs,
-      cached: false,
-      fetchedAt: new Date().toISOString(),
+      fetchedAt: new Date().toLocaleString('es-PA', { timeZone: 'America/Panama' }),
       total: jobs.length,
     };
 

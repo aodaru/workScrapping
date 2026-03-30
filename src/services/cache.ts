@@ -10,7 +10,7 @@ class JobCache {
   private ttl: number;
   private maxProjects: number = 100;
 
-  constructor(ttlMinutes: number = 15) {
+  constructor(ttlMinutes: number = 30) {
     this.ttl = ttlMinutes * 60 * 1000;
   }
 

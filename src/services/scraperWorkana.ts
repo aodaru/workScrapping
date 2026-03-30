@@ -29,6 +29,54 @@ function buildUrl(baseUrl: string, filters: Record<string, string>): string {
   return queryString ? `${baseUrl}?${queryString}` : baseUrl;
 }
 
+// Función auxiliar LOCAL (dentro del evaluate)
+function formatPanamaDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Panama',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+  }).format(date).replace(',', '');
+}
+function parseRelativeDate(text: string): string {
+  const now = new Date();
+  const ms = 60 * 1000;
+  const hs = 60 * ms;
+  const ds = 24 * hs;
+  
+  const matchMinutes = text.match(/hace\s*(\d+)\s*minuto/i);
+  const matchHours = text.match(/hace\s*(\d+)\s*hora/i);
+  const matchHoursText = text.match(/hora/i);
+  const matchDays = text.match(/hace\s*(\d+)\s*d[ií]a/i);
+  const matchWeeks = text.match(/hace\s*(\d+)\s*semana/i);
+  const matchYesterday = text.match(/^ayer$/i);
+  const matchInstant = text.match(/instante|just\s*now/i);
+  if (matchInstant) return formatPanamaDate(now);
+  if (matchMinutes) return formatPanamaDate(new Date(now.getTime() - parseInt(matchMinutes[1]) * ms));
+  if (matchHours) return formatPanamaDate(new Date(now.getTime() - parseInt(matchHours[1]) * hs));
+  if (matchHoursText) return formatPanamaDate(new Date(now.getTime() - hs));
+  if (matchDays) return formatPanamaDate(new Date(now.getTime() - parseInt(matchDays[1]) * ds));
+  if (matchYesterday) return formatPanamaDate(new Date(now.getTime() - ds));
+  if (matchWeeks) return formatPanamaDate(new Date(now.getTime() - parseInt(matchWeeks[1]) * 7 * ds));
+  
+  return text;
+}
+
+function parseDate(dateStr: string): Date {
+  // Formato actual: "2026-03-28 15:15:51"
+  const [datePart, timePart] = dateStr.split(' ');
+  const [year, month, day] = datePart.split('-');
+  const [hour, minute, second] = timePart.split(':');
+  
+  return new Date(
+    parseInt(year),
+    parseInt(month) - 1,
+    parseInt(day),
+    parseInt(hour),
+    parseInt(minute),
+    parseInt(second)
+  );
+}
+
 async function extractProjectsFromList(page: Page): Promise<Project[]> {
   return await page.evaluate(() => {
     const selectors = [
@@ -73,7 +121,7 @@ async function extractProjectsFromList(page: Page): Promise<Project[]> {
       if (url && url.startsWith('/')) {
         url = 'https://www.workana.com' + url;
       }
-      
+
       return {
         id: id,
         title: title || 'N/A',
@@ -82,12 +130,12 @@ async function extractProjectsFromList(page: Page): Promise<Project[]> {
         skills: Array.from(skillsEls).map(s => s.textContent?.trim()).filter(Boolean),
         url: url,
         postedDate: dateEl?.textContent?.trim() || 'N/A',
-        extractedAt: new Date().toISOString(),
+        extractedAt: new Date().toLocaleString('es-PA', { timeZone: 'America/Panama' }),
         paymentVerified: paymentVerified,
         bids: bids?.textContent?.trim().split(': ')[1] || '0',
       };
-    }).filter((p: any) => p.title !== 'N/A' && p.url !== '');
-  });
+    }).filter((p: any) => p.title !== 'N/A' && p.url !== '')
+  })
 }
 
 function hasValidBudget(budget: string): boolean {
@@ -100,32 +148,33 @@ function hasValidBudget(budget: string): boolean {
   return !isNaN(amount) && amount > 0;
 }
 
-function parsePostedDate(dateStr: string): number {
-  if (!dateStr || dateStr === 'N/A') return 0;
-  
-  const now = new Date();
-  const numMatch = dateStr.match(/(\d+)/);
-  if (!numMatch) return now.getTime();
-  
-  const num = parseInt(numMatch[1]);
-  
-  if (dateStr.includes('hour') || dateStr.includes('hora')) {
-    return now.getTime() - num * 60 * 60 * 1000;
-  }
-  if (dateStr.includes('day') || dateStr.includes('día') || dateStr.includes('dia')) {
-    return now.getTime() - num * 24 * 60 * 60 * 1000;
-  }
-  if (dateStr.includes('min')) {
-    return now.getTime() - num * 60 * 1000;
-  }
-  
-  return now.getTime();
+function formatedPost(projects: Project[]): Project[] {
+  return projects.map(p => {
+    const postedDate = parseRelativeDate(p.postedDate)
+    return {
+      id: p.id,
+      title: p.title,
+      description: p.description,
+      budget: p.budget,
+      skills: p.skills, 
+      url: p.url,
+      postedDate: postedDate,
+      extractedAt: p.extractedAt,
+      paymentVerified: p.paymentVerified,
+      bids: p.bids
+    }
+  });
 }
 
 function sortByPostedDate(projects: Project[]): Project[] {
   return projects.sort((a, b) => {
-    const dateA = parsePostedDate(a.postedDate);
-    const dateB = parsePostedDate(b.postedDate);
+    const dateA = new Date(parseDate(a.postedDate));
+    const dateB = new Date(parseDate(b.postedDate));
+
+    // Si alguna fecha es inválida, ponerla al final
+    if (isNaN(dateA)) return 1;
+    if (isNaN(dateB)) return -1;
+
     return dateB - dateA;
   });
 }
@@ -170,10 +219,8 @@ export async function scraperWorkana(): Promise<Project[]> {
         await page.goto(`${url}&page=${pag}`, { timeout: 15000 });
         await page.waitForLoadState('domcontentloaded');
         const basicProjects = await extractProjectsFromList(page);
-        console.log(basicProjects)
         allProjectsByLang.push(...basicProjects)
       }
-
 
       console.log(`   ${allProjectsByLang.length} proyectos extraídos.`);
       if (allProjectsByLang.length === 0) {
@@ -201,7 +248,8 @@ export async function scraperWorkana(): Promise<Project[]> {
       allFilteredProjects.push(...filteredProjects.map(p => ({ ...p, language: lang })));
     }
 
-    const sortedProjects = sortByPostedDate(allFilteredProjects);
+    const formatedPosts = formatedPost(allFilteredProjects)
+    const sortedProjects = sortByPostedDate(formatedPosts);
     console.log(`\n✅ Total de proyectos: ${sortedProjects.length}`);
 
     return sortedProjects;
