@@ -172,10 +172,10 @@ function sortByPostedDate(projects: Project[]): Project[] {
     const dateB = new Date(parseDate(b.postedDate));
 
     // Si alguna fecha es inválida, ponerla al final
-    if (isNaN(dateA)) return 1;
-    if (isNaN(dateB)) return -1;
+    if (!isFinite(dateA.getTime())) return 1;
+    if (!isFinite(dateB.getTime())) return -1;
 
-    return dateB - dateA;
+    return dateB.getTime() - dateA.getTime();
   });
 }
 

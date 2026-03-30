@@ -39,9 +39,9 @@ app.get('/listwork', (req, res) => {
     console.log(cached)
     // console.log(`cantidad de cache ${cached.data.length}`);
     const response: JobsResponse = {
-      data: cached,
+      data: cached.data,
       fetchedAt: new Date().toISOString(),
-      total: cached.length,
+      total: cached.data.length,
     };
 
     res.json(response);
@@ -84,7 +84,7 @@ app.get('/listworkana', authMiddleware, async (_req, res) => {
           fetchedAt: new Date().toISOString(),
           total: jobs.length,
         };
-        jobCache.set([...cached, ...jobsFilter]);
+        jobCache.set([...cached.data, ...jobsFilter]);
         res.json(response);
       }else{
         const response: JobsResponse = {
