@@ -37,26 +37,49 @@ function formatPanamaDate(date: Date): string {
     hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
   }).format(date).replace(',', '');
 }
+
 function parseRelativeDate(text: string): string {
   const now = new Date();
   const ms = 60 * 1000;
   const hs = 60 * ms;
   const ds = 24 * hs;
   
-  const matchMinutes = text.match(/hace\s*(\d+)\s*minuto/i);
-  const matchHours = text.match(/hace\s*(\d+)\s*hora/i);
-  const matchHoursText = text.match(/hora/i);
-  const matchDays = text.match(/hace\s*(\d+)\s*d[ií]a/i);
-  const matchWeeks = text.match(/hace\s*(\d+)\s*semana/i);
-  const matchYesterday = text.match(/^ayer$/i);
-  const matchInstant = text.match(/instante|just\s*now/i);
+  // MINUTOS
+  const matchMinutesEs = text.match(/hace\s*(\d+)\s*minuto/i);
+  const matchMinutesEn = text.match(/(\d+)\s*minutes?\s*ago/i);
+  
+  // HORAS
+  const matchHoursEs = text.match(/hace\s*(\d+)\s*hora/i);
+  const matchHoursEn = text.match(/(\d+)\s*hours?\s*ago/i);
+  const matchHourGeneric = text.match(/(?:hora|an?\s*hour)/i);
+  
+  // DÍAS
+  const matchDaysEs = text.match(/hace\s*(\d+)\s*d[ií]a/i);
+  const matchDaysEn = text.match(/(\d+)\s*days?\s*ago/i);
+  
+  // SEMANAS
+  const matchWeeksEs = text.match(/hace\s*(\d+)\s*semana/i);
+  const matchWeeksEn = text.match(/(\d+)\s*weeks?\s*ago/i);
+  
+  // AYER / YESTERDAY
+  const matchYesterday = text.match(/(?:ayer|yesterday)/i);
+  
+  // INSTANTE / JUST NOW
+  const matchInstant = text.match(/(?:instante|just\s*now)/i);
+  
+  // Verificar con alternativa (ES o EN)
+  const minutes = matchMinutesEs?.[1] || matchMinutesEn?.[1];
+  const hours = matchHoursEs?.[1] || matchHoursEn?.[1];
+  const days = matchDaysEs?.[1] || matchDaysEn?.[1];
+  const weeks = matchWeeksEs?.[1] || matchWeeksEn?.[1];
+  
   if (matchInstant) return formatPanamaDate(now);
-  if (matchMinutes) return formatPanamaDate(new Date(now.getTime() - parseInt(matchMinutes[1]) * ms));
-  if (matchHours) return formatPanamaDate(new Date(now.getTime() - parseInt(matchHours[1]) * hs));
-  if (matchHoursText) return formatPanamaDate(new Date(now.getTime() - hs));
-  if (matchDays) return formatPanamaDate(new Date(now.getTime() - parseInt(matchDays[1]) * ds));
+  if (minutes) return formatPanamaDate(new Date(now.getTime() - parseInt(minutes) * ms));
+  if (hours) return formatPanamaDate(new Date(now.getTime() - parseInt(hours) * hs));
+  if (matchHourGeneric) return formatPanamaDate(new Date(now.getTime() - hs));
+  if (days) return formatPanamaDate(new Date(now.getTime() - parseInt(days) * ds));
   if (matchYesterday) return formatPanamaDate(new Date(now.getTime() - ds));
-  if (matchWeeks) return formatPanamaDate(new Date(now.getTime() - parseInt(matchWeeks[1]) * 7 * ds));
+  if (weeks) return formatPanamaDate(new Date(now.getTime() - parseInt(weeks) * 7 * ds));
   
   return text;
 }
