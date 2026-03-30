@@ -173,7 +173,9 @@ function hasValidBudget(budget: string): boolean {
 
 function formatedPost(projects: Project[]): Project[] {
   return projects.map(p => {
+    console.log(`DEBUG - postedDate: "${p.postedDate}", language: ${p.language}`);
     const postedDate = parseRelativeDate(p.postedDate)
+    console.log(`DEBUG - transformed: "${postedDate}"`);
     return {
       id: p.id,
       title: p.title,
