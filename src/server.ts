@@ -87,10 +87,10 @@ app.get('/listworkana', authMiddleware, async (_req, res) => {
         jobCache.set([...cached.data, ...jobsFilter]);
         res.json(response);
       }else{
-        const response: JobsResponse = {
+        const json = {
           message: 'no hay nuevos post!',
         };
-        res.status(200).json(response);
+        res.status(200).json(json);
       }
     }else{
       jobCache.set(jobs);
