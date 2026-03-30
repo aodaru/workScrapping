@@ -132,7 +132,7 @@ async function extractProjectsFromList(page: Page): Promise<Project[]> {
         postedDate: dateEl?.textContent?.trim() || 'N/A',
         extractedAt: new Date().toLocaleString('es-PA', { timeZone: 'America/Panama' }),
         paymentVerified: paymentVerified,
-        bids: bids?.textContent?.trim().split(': ')[1] || '0',
+        bids: bids?.textContent?.trim()?.split(': ')?.[1] || '0',
       };
     }).filter((p: any) => p.title !== 'N/A' && p.url !== '')
   })
