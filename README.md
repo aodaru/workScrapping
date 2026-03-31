@@ -16,7 +16,7 @@ API para extraer y filtrar ofertas de trabajo desde múltiples plataformas de fr
 - **Runtime**: Node.js >=20
 - **Lenguaje**: TypeScript
 - **Servidor**: Express.js
-- **Scraping**: Playwright (Firefox)
+- **Scraping**: [Playwright](https://playwright.dev/) (Firefox)
 - **Testing**: Playwright Test
 
 ## Instalación
@@ -27,10 +27,10 @@ npm install
 
 ## Configuración
 
-| Variable | Default | Descripción |
-|----------|---------|-------------|
-| PORT | 3000 | Puerto del servidor |
-| API_KEY | workana-api-key | Key para endpoints protegidos |
+| Variable | Default         | Descripción                   |
+| -------- | --------------- | ----------------------------- |
+| PORT     | 3000            | Puerto del servidor           |
+| API_KEY  | workana-api-key | Key para endpoints protegidos |
 
 ## Uso
 
@@ -53,7 +53,7 @@ npm start
 src/
 ├── server.ts          # Servidor Express y endpoints
 ├── services/
-│   ├── scraper.ts     # Lógica de scraping
+│   ├── scraperWorkana.ts # Lógica de scraping de Workana
 │   └── cache.ts       # Cache en memoria
 ├── types.ts           # TypeScript interfaces
 └── index.ts          # Entry point (si aplica)
@@ -61,55 +61,12 @@ src/
 
 ## API Endpoints
 
-### GET /health
-
-Health check del servidor.
-
-**Respuesta:**
-```json
-{
-  "status": "ok",
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}
-```
-
-### GET /getJobs
-
-Obtiene las ofertas de trabajo. Usa cache si está disponible.
-
-**Respuesta:**
-```json
-{
-  "data": [
-    {
-      "id": "proj_1_123456789",
-      "title": "Desarrollador Web Full Stack",
-      "description": "Descripción del proyecto...",
-      "budget": "USD 500-1000",
-      "skills": ["React", "Node.js", "TypeScript"],
-      "url": "https://www.workana.com/job/123",
-      "postedDate": "2 días atrás",
-      "extractedAt": "2024-01-01T00:00:00.000Z",
-      "paymentVerified": true,
-      "language": "es"
-    }
-  ],
-  "cached": false,
-  "fetchedAt": "2024-01-01T00:00:00.000Z",
-  "total": 10
-}
-```
-
-### POST /refresh
-
-Fuerza una nueva extracción de datos. Requiere autenticación.
-
-**Headers:**
-```
-x-api-key: <API_KEY>
-```
-
-**Respuesta:** Mismo formato que `/getJobs`
+| Método | Endpoint       | Descripción                          |
+| ------ | -------------- | ------------------------------------ |
+| `GET`  | `/health`      | Health check                         |
+| `GET`  | `/listwork`    | Obtener jobs (usa cache)             |
+| `GET`  | `/listworkana` | Ejecutar scraping (requiere API key) |
+| `POST` | `/refresh`     | Forzar refresh (requiere API key)    |
 
 ## Agregar Nuevos Sitios
 
@@ -133,7 +90,7 @@ interface Project {
   postedDate: string;
   extractedAt: string;
   paymentVerified: boolean;
-  language: 'es' | 'en';
+  language: "es" | "en";
 }
 ```
 
@@ -144,8 +101,19 @@ npx playwright test
 ```
 
 Los tests generan:
+
 - Screenshots de las páginas scrapeadas
 - Archivos JSON con los proyectos extraídos
+
+## ScreenShots
+
+### Cree un flujo en n8n que ejecuta el scraping cada 30min y envia los resultados a mi ntfy
+
+![flow](./screensshots/n8nflow.png)
+
+### NTFY
+
+![ntfy](./screensshots/Screenshotntfy.jpg)
 
 ## Licencia
 
