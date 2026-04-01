@@ -105,6 +105,10 @@ Los tests generan:
 - Screenshots de las páginas scrapeadas
 - Archivos JSON con los proyectos extraídos
 
+## Despliegue
+
+Para el despliegue utilice la 🔗[cubepath](https://cubepath.com). una VM tipo gp.micro para instalar dockploy y poder desplegar tanto el front como el back.
+
 ## ScreenShots
 
 ### Cree un flujo en n8n que ejecuta el scraping cada 30min y envia los resultados a mi ntfy

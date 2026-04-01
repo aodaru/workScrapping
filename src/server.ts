@@ -1,42 +1,46 @@
-import express from 'express';
-import cors from 'cors';
-import { jobCache } from './services/cache.js';
-import { scraperWorkana } from './services/scraperWorkana.js';
-import type { JobsResponse } from './types.js';
-import type { Project } from './types.js';
+import express from "express";
+import cors from "cors";
+import { jobCache } from "./services/cache.js";
+import { scraperWorkana } from "./services/scraperWorkana.js";
+import type { JobsResponse } from "./types.js";
+import type { Project } from "./types.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const API_KEY = process.env.API_KEY || 'workana-api-key';
+const API_KEY = process.env.API_KEY || "workana-api-key";
 
 const corsOptions = {
   origin: [
-    'localhost',
-    'https://teapartyn8n.duckdns.org/'
-  ]
-}
+    "localhost",
+    "https://teapartyn8n.duckdns.org/",
+    "https://worklist.adalgarcia.com",
+  ],
+};
 
 app.use(cors(corsOptions));
 app.use(express.json());
 
-const authMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const providedKey = req.headers['x-api-key'];
+const authMiddleware = (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+) => {
+  const providedKey = req.headers["x-api-key"];
   if (!providedKey || providedKey !== API_KEY) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return res.status(401).json({ error: "Unauthorized" });
   }
   next();
 };
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-app.get('/listwork', (req, res) => {
-  
-  const cached = jobCache.get()
+app.get("/listwork", (req, res) => {
+  const cached = jobCache.get();
 
-  if(cached){
-    console.log(cached)
+  if (cached) {
+    console.log(cached);
     // console.log(`cantidad de cache ${cached.data.length}`);
     const response: JobsResponse = {
       data: cached.data,
@@ -45,40 +49,42 @@ app.get('/listwork', (req, res) => {
     };
 
     res.json(response);
-  }else{
-    res.status(404).json({ error: 'Cache is empty' })
+  } else {
+    res.status(404).json({ error: "Cache is empty" });
   }
-})
+});
 
-app.get('/listworkana', authMiddleware, async (_req, res) => {
+app.get("/listworkana", authMiddleware, async (_req, res) => {
   try {
     const cached = jobCache.get();
-    
-    console.log('🔄 Ejecutando scraping...');
+
+    console.log("🔄 Ejecutando scraping...");
     const jobs = await scraperWorkana();
 
     // modificar esta parte
     if (cached) {
-      const dataCached = cached.data
+      const dataCached = cached.data;
 
       console.log(`cantidad de cache ${dataCached.length}`);
 
-      const cachedIndex = dataCached.reduce((acc, cache) => {
-        const id = cache.id
+      const cachedIndex = dataCached.reduce(
+        (acc, cache) => {
+          const id = cache.id;
 
-        if(!acc[id]) {
-          acc[id] = []
-        }
+          if (!acc[id]) {
+            acc[id] = [];
+          }
 
-        acc[id].push(cache)
+          acc[id].push(cache);
 
-        return acc
-      }, {} as Record<string, Project[]>)
+          return acc;
+        },
+        {} as Record<string, Project[]>,
+      );
 
-      const jobsFilter = jobs.filter(job => !cachedIndex[job.id]) 
+      const jobsFilter = jobs.filter((job) => !cachedIndex[job.id]);
 
-
-      if(jobsFilter.length > 0){
+      if (jobsFilter.length > 0) {
         const response: JobsResponse = {
           data: jobsFilter,
           fetchedAt: new Date().toISOString(),
@@ -86,52 +92,56 @@ app.get('/listworkana', authMiddleware, async (_req, res) => {
         };
         jobCache.set([...cached.data, ...jobsFilter]);
         res.json(response);
-      }else{
+      } else {
         const json = {
-          message: 'no hay nuevos post!',
+          message: "no hay nuevos post!",
         };
         res.status(200).json(json);
       }
-    }else{
+    } else {
       jobCache.set(jobs);
 
       // esto debe devolver los trabajos filtrados
       const response: JobsResponse = {
         data: jobs,
-        fetchedAt: new Date().toLocaleString('es-PA', { timeZone: 'America/Panama' }),
+        fetchedAt: new Date().toLocaleString("es-PA", {
+          timeZone: "America/Panama",
+        }),
         total: jobs.length,
       };
 
       res.json(response);
     }
   } catch (error) {
-    console.error('❌ Error en /listworkana:', error);
+    console.error("❌ Error en /listworkana:", error);
     res.status(500).json({
-      error: 'Failed to fetch jobs',
-      message: error instanceof Error ? error.message : 'Unknown error',
+      error: "Failed to fetch jobs",
+      message: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });
 
-app.post('/refresh', authMiddleware, async (_req, res) => {
+app.post("/refresh", authMiddleware, async (_req, res) => {
   try {
-    console.log('🔄 Forzando refresh...');
+    console.log("🔄 Forzando refresh...");
     jobCache.clear();
     const jobs = await scraperWorkana();
     jobCache.set(jobs);
 
     const response: JobsResponse = {
       data: jobs,
-      fetchedAt: new Date().toLocaleString('es-PA', { timeZone: 'America/Panama' }),
+      fetchedAt: new Date().toLocaleString("es-PA", {
+        timeZone: "America/Panama",
+      }),
       total: jobs.length,
     };
 
     res.json(response);
   } catch (error) {
-    console.error('❌ Error en /refresh:', error);
+    console.error("❌ Error en /refresh:", error);
     res.status(500).json({
-      error: 'Failed to refresh jobs',
-      message: error instanceof Error ? error.message : 'Unknown error',
+      error: "Failed to refresh jobs",
+      message: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });
@@ -140,6 +150,8 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📋 Endpoints:`);
   console.log(`   GET  /getJobs  - Obtener jobs (usa cache si disponible)`);
-  console.log(`   POST /refresh  - Forzar refresh (requiere x-api-key: ${API_KEY})`);
+  console.log(
+    `   POST /refresh  - Forzar refresh (requiere x-api-key: ${API_KEY})`,
+  );
   console.log(`   GET  /health   - Health check`);
 });
