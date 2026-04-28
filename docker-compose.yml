@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   app:
     build:
@@ -8,7 +6,7 @@ services:
     container_name: workscrapping_app
     restart: always
     ports:
-      - "${APP_PORT:-3000}:${PORT:-3000}"
+      - ${APP_PORT:-3000}:3000
     environment:
       - PORT=${PORT:-3000}
       - NODE_ENV=production
