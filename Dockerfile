@@ -1,5 +1,5 @@
-# Usa la imagen base de Node.js 22 en Ubuntu Jammy
-FROM node:22-jammy
+# Usa la imagen base de Node.js 22 en Debian Bookworm
+FROM node:22-bookworm
 
 # Establecer directorio de trabajo
 WORKDIR /app
