@@ -12,6 +12,8 @@ const API_KEY = process.env.API_KEY || "workana-api-key";
 const corsOptions = {
   origin: [
     "localhost",
+    "10.0.5.16/32",
+    "172.12.23.2/32",
     "https://teapartyn8n.duckdns.org/",
     "https://worklist.adalgarcia.com",
   ],
