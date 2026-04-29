@@ -1,5 +1,5 @@
-# Usa la imagen de Playwright que ya tiene las dependencias del sistema
-FROM mcr.microsoft.com/playwright:v1.41.0-jammy
+# Usa la imagen base de Node.js 22 en Ubuntu Jammy
+FROM node:22-jammy
 
 # Establecer directorio de trabajo
 WORKDIR /app
@@ -9,6 +9,9 @@ COPY package*.json ./
 
 # Instalar dependencias con npm
 RUN npm install
+
+# Instalar navegadores de Playwright (Chromium y Firefox) con sus dependencias
+RUN npx playwright install --with-deps chromium firefox
 
 # Copiar el resto del código
 COPY . .
