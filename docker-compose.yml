@@ -6,7 +6,6 @@ services:
     container_name: workscrapping_app
     restart: always
     ports:
-      - ${APP_PORT:-3000}:3000
+      - 30506:3000
     environment:
-      - PORT=${PORT:-3000}
       - NODE_ENV=production
