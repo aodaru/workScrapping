@@ -143,10 +143,15 @@ async function extractProjectsFromList(page: Page): Promise<Project[]> {
           'h2, h3, .project-title, .job-title, [class*="title"]',
         );
         const title: string = titleEl?.textContent?.trim() ?? "";
-        // general un identificador unico
-        const id = btoa(encodeURIComponent(title))
+        
+        // Extraer linkEl ANTES de generar el ID
+        const linkEl = card.querySelector("a");
+        
+        //.generar un identificador unico usando titulo + url para evitar colisiones
+        const id = btoa(encodeURIComponent(title + (linkEl?.getAttribute("href") || "")))
           .replace(/[+/=]/g, "")
-          .substring(0, 12);
+          .substring(0, 20);
+          
         const descEl = card.querySelector(
           ".description, .project-description, .job-description, p",
         );
@@ -156,7 +161,6 @@ async function extractProjectsFromList(page: Page): Promise<Project[]> {
         const skillsEls = card.querySelectorAll(
           '.skill, .tag, [class*="skill"], [class*="tag"]',
         );
-        const linkEl = card.querySelector("a");
         const dateEl = card.querySelector(
           '.date, .posted, [class*="date"], [class*="time"]',
         );
@@ -195,19 +199,25 @@ async function extractProjectsFromList(page: Page): Promise<Project[]> {
 
 function hasValidBudget(budget: string): boolean {
   if (!budget || budget === "N/A") return false;
-  const amountMatch = budget.match(/USD\s*([\d,\.]+)/);
+  
+  // Este regex busca: 
+  // 1. Un símbolo de $ opcional
+  // 2. La palabra USD opcional
+  // 3. Un número con decimales o comas
+  const amountMatch = budget.match(/(?:\$|USD)?\s*([\d,\.]+)/i);
+  
   if (!amountMatch) return false;
 
-  const amountStr = amountMatch[1].replace(/[,.]/g, "");
-  const amount = parseInt(amountStr);
+  // Limpiamos el string de posibles comas o puntos para convertir a número
+  const amountStr = amountMatch[1].replace(/,/g, ""); 
+  const amount = parseFloat(amountStr);
+  
   return !isNaN(amount) && amount > 0;
 }
 
 function formatedPost(projects: Project[]): Project[] {
   return projects.map((p) => {
-    console.log(`DEBUG - postedDate: "${p.postedDate}"`);
     const postedDate = parseRelativeDate(p.postedDate);
-    console.log(`DEBUG - transformed: "${postedDate}"`);
     return {
       id: p.id,
       title: p.title,
@@ -268,17 +278,38 @@ export async function scraperWorkana(): Promise<Project[]> {
       console.log(`\n🔍 Scraping Workana (${currentLanguageName})...`);
 
       const url = buildUrl("https://www.workana.com/jobs", filters);
-      await page.goto(url, { timeout: 25000 });
-      await page.waitForLoadState("domcontentloaded");
+      await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+      await page.waitForTimeout(1500); // Esperar a que Vue renderice el contenido
+
+      // Extraer siempre la primera página ANTES del bucle de paginación
+      const basicProjectsPage1 = await extractProjectsFromList(page);
+      allProjectsByLang.push(...basicProjectsPage1);
+      console.log(`   Página 1: ${basicProjectsPage1.length} proyectos encontrados.`);
 
       const pageNumbers = await getPageCount(page);
 
-      // codigo bucle de paginacion
+      // codigo bucle de paginacion (solo páginas adicionales)
       for (const pag of pageNumbers) {
-        await page.goto(`${url}&page=${pag}`, { timeout: 15000 });
-        await page.waitForLoadState("domcontentloaded");
-        const basicProjects = await extractProjectsFromList(page);
-        allProjectsByLang.push(...basicProjects);
+        try {
+          // Usar el objeto URL para construir la paginación de forma robusta
+          const pagUrlObj = new URL(url);
+          pagUrlObj.searchParams.set("page", pag.toString());
+          await page.goto(pagUrlObj.toString(), { waitUntil: "networkidle", timeout: 30000 });
+
+          // Esperamos un poco más para asegurar que el contenido dinámico se cargue
+          await page.waitForTimeout(1000);
+
+          const basicProjects = await extractProjectsFromList(page);
+          allProjectsByLang.push(...basicProjects);
+          console.log(
+            `   Página ${pag}: ${basicProjects.length} proyectos encontrados.`,
+          );
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          console.error(`⚠️ Error en página ${pag}:`, errorMessage);
+          // Continuamos con la siguiente página en lugar de abortar todo el proceso
+          continue;
+        }
       }
 
       console.log(`   ${allProjectsByLang.length} proyectos extraídos.`);
@@ -288,21 +319,16 @@ export async function scraperWorkana(): Promise<Project[]> {
 
       const filteredProjects = allProjectsByLang.filter((project) => {
         const validBudget = hasValidBudget(project.budget);
-        const paymentVerified = project.paymentVerified;
 
-        if (!validBudget || !paymentVerified) {
+        // Ya no descartamos por paymentVerified - el usuario decidirá si le interesa
+        if (!validBudget) {
           console.log(
-            "❌ Descartado:",
-            JSON.stringify({
-              title: project.title,
-              budget: project.budget,
-              validBudget,
-              paymentVerified,
-            }),
+            `❌ [DESCARTE] Presupuesto no válido | Título: "${project.title.substring(0, 30)}..." | Budget: "${project.budget}"`,
           );
+          return false;
         }
 
-        return validBudget && paymentVerified;
+        return true;
       });
 
       console.log(`   ${filteredProjects.length} proyectos filtrados.`);

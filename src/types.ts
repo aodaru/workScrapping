@@ -9,6 +9,7 @@ export interface Project {
   extractedAt: string;
   paymentVerified: boolean;
   bids: string;
+  language?: string; // Añadido para identificar el idioma del proyecto
 }
 
 export interface JobsResponse {

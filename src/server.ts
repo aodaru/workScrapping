@@ -151,7 +151,7 @@ app.post("/refresh", authMiddleware, async (_req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📋 Endpoints:`);
-  console.log(`   GET  /getJobs  - Obtener jobs (usa cache si disponible)`);
+  console.log(`   GET  /listworkana  - Obtener jobs (usa cache si disponible)`);
   console.log(
     `   POST /refresh  - Forzar refresh (requiere x-api-key: ${API_KEY})`,
   );

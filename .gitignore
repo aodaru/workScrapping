@@ -2,6 +2,9 @@
 # Playwright
 node_modules/
 dist/
+.agents/
+AGENTS.md
+skills-lock.json
 /test-results/
 /playwright-report/
 /blob-report/
