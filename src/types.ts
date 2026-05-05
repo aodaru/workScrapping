@@ -1,6 +1,7 @@
 export interface Project {
   id: string;
   title: string;
+  category: string;
   description: string;
   budget: string;
   skills: string[];
@@ -9,7 +10,7 @@ export interface Project {
   extractedAt: string;
   paymentVerified: boolean;
   bids: string;
-  language?: string; // Añadido para identificar el idioma del proyecto
+  language?: string;
 }
 
 export interface JobsResponse {

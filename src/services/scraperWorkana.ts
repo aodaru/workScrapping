@@ -2,18 +2,27 @@ import { firefox, type Browser, type Page } from "playwright";
 import type { Project } from "../types.js";
 
 const BASE_FILTERS = {
-  category: "it-programming",
+  // category: "it-programming",
   publication: "3d",
   client_history: "1",
 };
 
+const CATEGORY_FILTERS = {
+  it: {
+    category: "it-programming",
+    ...BASE_FILTERS,
+  },
+  va: {
+    category: "admin_support",
+    ...BASE_FILTERS,
+  },
+};
+
 const LANGUAGE_FILTERS = {
   es: {
-    ...BASE_FILTERS,
     language: "es",
   },
   en: {
-    ...BASE_FILTERS,
     language: "en",
   },
 };
@@ -136,82 +145,86 @@ async function extractProjectsFromList(page: Page): Promise<Project[]> {
       );
     }
 
-    return Array.from(projectCards || [])
-      .slice(0, 10)
-      .map((card, index) => {
-        const titleEl = card.querySelector(
-          'h2, h3, .project-title, .job-title, [class*="title"]',
-        );
-        const title: string = titleEl?.textContent?.trim() ?? "";
-        
-        // Extraer linkEl ANTES de generar el ID
-        const linkEl = card.querySelector("a");
-        
-        //.generar un identificador unico usando titulo + url para evitar colisiones
-        const id = btoa(encodeURIComponent(title + (linkEl?.getAttribute("href") || "")))
-          .replace(/[+/=]/g, "")
-          .substring(0, 20);
-          
-        const descEl = card.querySelector(
-          ".description, .project-description, .job-description, p",
-        );
-        const budgetEl = card.querySelector(
-          '.budget, .price, [class*="budget"], [class*="price"]',
-        );
-        const skillsEls = card.querySelectorAll(
-          '.skill, .tag, [class*="skill"], [class*="tag"]',
-        );
-        const dateEl = card.querySelector(
-          '.date, .posted, [class*="date"], [class*="time"]',
-        );
-        const bids = card.querySelector('.bids, [class*="bids"]');
+    return (
+      Array.from(projectCards || [])
+        // .slice(0, 10)
+        .map((card, index) => {
+          const titleEl = card.querySelector(
+            'h2, h3, .project-title, .job-title, [class*="title"]',
+          );
+          const title: string = titleEl?.textContent?.trim() ?? "";
 
-        const paymentVerifiedEl = card.querySelector(
-          "span.payment-verified, .payment-verified span",
-        );
-        const paymentVerified = paymentVerifiedEl ? true : false;
+          // Extraer linkEl ANTES de generar el ID
+          const linkEl = card.querySelector("a");
 
-        let url = linkEl?.getAttribute("href") || "";
-        if (url && url.startsWith("/")) {
-          url = "https://www.workana.com" + url;
-        }
+          //.generar un identificador unico usando titulo + url para evitar colisiones
+          const id = btoa(
+            encodeURIComponent(title + (linkEl?.getAttribute("href") || "")),
+          )
+            .replace(/[+/=]/g, "")
+            .substring(0, 20);
 
-        return {
-          id: id,
-          title: title || "N/A",
-          description: descEl?.textContent?.trim() || "",
-          budget: budgetEl?.textContent?.trim() || "N/A",
-          skills: Array.from(skillsEls)
-            .map((s) => s.textContent?.trim())
-            .filter(Boolean),
-          url: url,
-          postedDate: dateEl?.textContent?.trim() || "N/A",
-          extractedAt: new Date().toLocaleString("es-PA", {
-            timeZone: "America/Panama",
-          }),
-          paymentVerified: paymentVerified,
-          bids: bids?.textContent?.trim()?.split(": ")?.[1] || "0",
-        };
-      })
-      .filter((p: any) => p.title !== "N/A" && p.url !== "");
+          const descEl = card.querySelector(
+            ".description, .project-description, .job-description, p",
+          );
+          const budgetEl = card.querySelector(
+            '.budget, .price, [class*="budget"], [class*="price"]',
+          );
+          const skillsEls = card.querySelectorAll(
+            '.skill, .tag, [class*="skill"], [class*="tag"]',
+          );
+          const dateEl = card.querySelector(
+            '.date, .posted, [class*="date"], [class*="time"]',
+          );
+          const bids = card.querySelector('.bids, [class*="bids"]');
+
+          const paymentVerifiedEl = card.querySelector(
+            "span.payment-verified, .payment-verified span",
+          );
+          const paymentVerified = paymentVerifiedEl ? true : false;
+
+          let url = linkEl?.getAttribute("href") || "";
+          if (url && url.startsWith("/")) {
+            url = "https://www.workana.com" + url;
+          }
+
+          return {
+            id: id,
+            title: title || "N/A",
+            description: descEl?.textContent?.trim() || "",
+            budget: budgetEl?.textContent?.trim() || "N/A",
+            skills: Array.from(skillsEls)
+              .map((s) => s.textContent?.trim())
+              .filter(Boolean),
+            url: url,
+            postedDate: dateEl?.textContent?.trim() || "N/A",
+            extractedAt: new Date().toLocaleString("es-PA", {
+              timeZone: "America/Panama",
+            }),
+            paymentVerified: paymentVerified,
+            bids: bids?.textContent?.trim()?.split(": ")?.[1] || "0",
+          };
+        })
+        .filter((p: any) => p.title !== "N/A" && p.url !== "")
+    );
   });
 }
 
 function hasValidBudget(budget: string): boolean {
   if (!budget || budget === "N/A") return false;
-  
-  // Este regex busca: 
+
+  // Este regex busca:
   // 1. Un símbolo de $ opcional
   // 2. La palabra USD opcional
   // 3. Un número con decimales o comas
   const amountMatch = budget.match(/(?:\$|USD)?\s*([\d,\.]+)/i);
-  
+
   if (!amountMatch) return false;
 
   // Limpiamos el string de posibles comas o puntos para convertir a número
-  const amountStr = amountMatch[1].replace(/,/g, ""); 
+  const amountStr = amountMatch[1].replace(/,/g, "");
   const amount = parseFloat(amountStr);
-  
+
   return !isNaN(amount) && amount > 0;
 }
 
@@ -221,6 +234,7 @@ function formatedPost(projects: Project[]): Project[] {
     return {
       id: p.id,
       title: p.title,
+      category: p.category,
       description: p.description,
       budget: p.budget,
       skills: p.skills,
@@ -270,72 +284,91 @@ export async function scraperWorkana(): Promise<Project[]> {
     const context = await browser.newContext();
     const page = await context.newPage();
 
-    for (const lang of ["es", "en"] as const) {
-      const filters = LANGUAGE_FILTERS[lang];
-      const currentLanguageName = lang === "es" ? "ESPAÑOL" : "INGLÉS";
-      const allProjectsByLang: Project[] = [];
+    for (const cat of ["it", "va"] as const) {
+      for (const lang of ["es", "en"] as const) {
+        const filters = {
+          ...CATEGORY_FILTERS[cat],
+          ...LANGUAGE_FILTERS[lang],
+        };
+        const currentLanguageName = lang === "es" ? "ESPAÑOL" : "INGLÉS";
+        const currentCategory =
+          cat === "it" ? "it-programming" : "admin support";
+        const allProjectsByLang: Project[] = [];
 
-      console.log(`\n🔍 Scraping Workana (${currentLanguageName})...`);
+        console.log(
+          `\n🔍 Scraping Workana (${currentLanguageName}) - (${currentCategory})...`,
+        );
 
-      const url = buildUrl("https://www.workana.com/jobs", filters);
-      await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
-      await page.waitForTimeout(1500); // Esperar a que Vue renderice el contenido
+        const url = buildUrl("https://www.workana.com/jobs", filters);
+        await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+        await page.waitForTimeout(1500); // Esperar a que Vue renderice el contenido
 
-      // Extraer siempre la primera página ANTES del bucle de paginación
-      const basicProjectsPage1 = await extractProjectsFromList(page);
-      allProjectsByLang.push(...basicProjectsPage1);
-      console.log(`   Página 1: ${basicProjectsPage1.length} proyectos encontrados.`);
+        // Extraer siempre la primera página ANTES del bucle de paginación
+        const basicProjectsPage1 = await extractProjectsFromList(page);
+        allProjectsByLang.push(...basicProjectsPage1);
+        console.log(
+          `   Página 1: ${basicProjectsPage1.length} proyectos encontrados.`,
+        );
 
-      const pageNumbers = await getPageCount(page);
+        const pageNumbers = await getPageCount(page);
 
-      // codigo bucle de paginacion (solo páginas adicionales)
-      for (const pag of pageNumbers) {
-        try {
-          // Usar el objeto URL para construir la paginación de forma robusta
-          const pagUrlObj = new URL(url);
-          pagUrlObj.searchParams.set("page", pag.toString());
-          await page.goto(pagUrlObj.toString(), { waitUntil: "networkidle", timeout: 30000 });
+        // codigo bucle de paginacion (solo páginas adicionales)
+        for (const pag of pageNumbers) {
+          try {
+            // Usar el objeto URL para construir la paginación de forma robusta
+            const pagUrlObj = new URL(url);
+            pagUrlObj.searchParams.set("page", pag.toString());
+            await page.goto(pagUrlObj.toString(), {
+              waitUntil: "networkidle",
+              timeout: 30000,
+            });
 
-          // Esperamos un poco más para asegurar que el contenido dinámico se cargue
-          await page.waitForTimeout(1000);
+            // Esperamos un poco más para asegurar que el contenido dinámico se cargue
+            await page.waitForTimeout(1000);
 
-          const basicProjects = await extractProjectsFromList(page);
-          allProjectsByLang.push(...basicProjects);
-          console.log(
-            `   Página ${pag}: ${basicProjects.length} proyectos encontrados.`,
-          );
-        } catch (err) {
-          const errorMessage = err instanceof Error ? err.message : String(err);
-          console.error(`⚠️ Error en página ${pag}:`, errorMessage);
-          // Continuamos con la siguiente página en lugar de abortar todo el proceso
+            const basicProjects = await extractProjectsFromList(page);
+            allProjectsByLang.push(...basicProjects);
+            console.log(
+              `   Página ${pag}: ${basicProjects.length} proyectos encontrados.`,
+            );
+          } catch (err) {
+            const errorMessage =
+              err instanceof Error ? err.message : String(err);
+            console.error(`⚠️ Error en página ${pag}:`, errorMessage);
+            // Continuamos con la siguiente página en lugar de abortar todo el proceso
+            continue;
+          }
+        }
+
+        console.log(`   ${allProjectsByLang.length} proyectos extraídos.`);
+        if (allProjectsByLang.length === 0) {
           continue;
         }
+
+        const filteredProjects = allProjectsByLang.filter((project) => {
+          const validBudget = hasValidBudget(project.budget);
+
+          // Ya no descartamos por paymentVerified - el usuario decidirá si le interesa
+          if (!validBudget) {
+            console.log(
+              `❌ [DESCARTE] Presupuesto no válido | Título: "${project.title.substring(0, 30)}..." | Budget: "${project.budget}"`,
+            );
+            return false;
+          }
+
+          return true;
+        });
+
+        console.log(`   ${filteredProjects.length} proyectos filtrados.`);
+
+        allFilteredProjects.push(
+          ...filteredProjects.map((p) => ({
+            ...p,
+            language: currentLanguageName,
+            category: currentCategory,
+          })),
+        );
       }
-
-      console.log(`   ${allProjectsByLang.length} proyectos extraídos.`);
-      if (allProjectsByLang.length === 0) {
-        continue;
-      }
-
-      const filteredProjects = allProjectsByLang.filter((project) => {
-        const validBudget = hasValidBudget(project.budget);
-
-        // Ya no descartamos por paymentVerified - el usuario decidirá si le interesa
-        if (!validBudget) {
-          console.log(
-            `❌ [DESCARTE] Presupuesto no válido | Título: "${project.title.substring(0, 30)}..." | Budget: "${project.budget}"`,
-          );
-          return false;
-        }
-
-        return true;
-      });
-
-      console.log(`   ${filteredProjects.length} proyectos filtrados.`);
-
-      allFilteredProjects.push(
-        ...filteredProjects.map((p) => ({ ...p, language: lang })),
-      );
     }
 
     const formatedPosts = formatedPost(allFilteredProjects);
