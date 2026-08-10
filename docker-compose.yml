@@ -9,6 +9,8 @@ services:
       - 30506:3000
     environment:
       - NODE_ENV=production
+    networks:
+      - ix-worklist_default
 networks:
   ix-worklist_default:
     external: true
